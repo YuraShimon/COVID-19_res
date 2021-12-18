@@ -1,0 +1,49 @@
+import pandas as pd
+import geopandas as gpd
+
+import plotly.graph_objs as go
+import plotly.express as px
+import plotly.figure_factory as ff
+from plotly.subplots import make_subplots
+import plotly.io as pio
+
+pio.renderers.default = 'browser'
+
+import streamlit as st
+
+
+def create_map(df, color, color_cs):
+    figure = px.choropleth(df,
+                        geojson=df.geometry,  # use geometry of df to map
+                        locations=df.index,  # index of df
+                        color=color,  # identify representing column
+                        hover_name='NEIGHBORHOOD_NAME',  # identify hover name
+                        color_continuous_scale=color_cs,
+                        center={'lat': 40.7128, 'lon': 74.0060},
+                        title='',
+                        width=1400,
+                        height=800
+                        )
+    return figure
+
+
+def update_map(figure):
+    figure.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+    figure.update(layout_showlegend=False)
+    figure.update_geos(fitbounds="locations", visible=False)
+    figure.layout.coloraxis.colorbar.title = ''
+
+gdf = gpd.read_file(r'E:/University/COVID-19/coronavirus-data-master/Geography-resources/MODZCTA_2010.shp')
+gdf = gdf.astype({'MODZCTA': 'int64'})
+
+df_zcta = pd.read_csv(r'E:/University/COVID-19/coronavirus-data-master/totals/data-by-modzcta.csv')
+
+df_merge_zcta = gdf.merge(df_zcta, right_on='MODIFIED_ZCTA', left_on='MODZCTA')
+
+df_merge_zcta.to_crs('EPSG:4326', inplace=True)
+
+fig = create_map(df_merge_zcta, 'POP_DENOMINATOR', 'blues')
+update_map(fig)
+
+
+fig.write_image(r'E:/University/COVID-19/images/POP_DENOMINATOR.png')
